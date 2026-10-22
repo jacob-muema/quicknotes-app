@@ -8,8 +8,28 @@ const noteCount = document.querySelector("#note-count");
 const searchInput = document.querySelector("#search-input");
 const clearAllBtn = document.querySelector("#clear-all-btn");
 
+const STORAGE_KEY = "quicknotes_data";
+
 // Notes stored as an array of objects
 let notes = [];
+
+// Save notes to localStorage
+function saveNotes() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+}
+
+// Load notes from localStorage
+function loadNotes() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        try {
+            notes = JSON.parse(saved);
+        } catch (error) {
+            console.error("Error parsing saved notes:", error);
+            notes = [];
+        }
+    }
+}
 
 // Update note count message
 function updateCount(count = notes.length) {
@@ -25,17 +45,20 @@ function updateCount(count = notes.length) {
 // Delete a note by id
 function deleteNote(id) {
     notes = notes.filter((note) => note.id !== id);
-    render();
+    saveNotes();
+    applyFilterAndRender();
 }
 
 // Render function: builds the list using createElement and textContent (never innerHTML for user text)
-function render(notesToRender = notes) {
+function render(notesToRender = notes, isSearching = false) {
     notesList.replaceChildren();
 
     if (notesToRender.length === 0) {
         const emptyLi = document.createElement("li");
         emptyLi.className = "empty-message";
-        emptyLi.textContent = "No notes to display.";
+        emptyLi.textContent = isSearching
+            ? "No notes match your search."
+            : "No notes to display.";
         notesList.appendChild(emptyLi);
         updateCount(notes.length);
         return;
@@ -87,6 +110,19 @@ function render(notesToRender = notes) {
     updateCount(notes.length);
 }
 
+// Filter notes according to the search box
+function applyFilterAndRender() {
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    if (!searchTerm) {
+        render(notes, false);
+    } else {
+        const filtered = notes.filter((note) =>
+            note.text.toLowerCase().includes(searchTerm)
+        );
+        render(filtered, true);
+    }
+}
+
 // Add note form submission with validation
 noteForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -115,11 +151,30 @@ noteForm.addEventListener("submit", (e) => {
     };
 
     notes.push(newNote);
-    render();
+    saveNotes();
 
     noteInput.value = "";
+    applyFilterAndRender();
     noteInput.focus();
 });
 
-// Initial render
+// Search input listener
+searchInput.addEventListener("input", applyFilterAndRender);
+
+// Bonus: Clear all notes with confirmation
+if (clearAllBtn) {
+    clearAllBtn.addEventListener("click", () => {
+        if (notes.length === 0) {
+            return;
+        }
+        if (confirm("Delete all notes?")) {
+            notes = [];
+            saveNotes();
+            applyFilterAndRender();
+        }
+    });
+}
+
+// Load notes on initialization and render
+loadNotes();
 render();
