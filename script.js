@@ -11,6 +11,23 @@ const clearAllBtn = document.querySelector("#clear-all-btn");
 // Notes stored as an array of objects
 let notes = [];
 
+// Update note count message
+function updateCount(count = notes.length) {
+    if (count === 0) {
+        noteCount.textContent = "You have no notes yet.";
+    } else if (count === 1) {
+        noteCount.textContent = "You have 1 note.";
+    } else {
+        noteCount.textContent = `You have ${count} notes.`;
+    }
+}
+
+// Delete a note by id
+function deleteNote(id) {
+    notes = notes.filter((note) => note.id !== id);
+    render();
+}
+
 // Render function: builds the list using createElement and textContent (never innerHTML for user text)
 function render(notesToRender = notes) {
     notesList.replaceChildren();
@@ -20,6 +37,7 @@ function render(notesToRender = notes) {
         emptyLi.className = "empty-message";
         emptyLi.textContent = "No notes to display.";
         notesList.appendChild(emptyLi);
+        updateCount(notes.length);
         return;
     }
 
@@ -53,6 +71,9 @@ function render(notesToRender = notes) {
         deleteBtn.type = "button";
         deleteBtn.className = "delete-btn";
         deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => {
+            deleteNote(note.id);
+        });
 
         footerDiv.appendChild(deleteBtn);
 
@@ -62,19 +83,34 @@ function render(notesToRender = notes) {
 
         notesList.appendChild(li);
     });
+
+    updateCount(notes.length);
 }
 
-// Add note form submission
+// Add note form submission with validation
 noteForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
     const text = noteInput.value.trim();
-    const category = noteCategory.value;
+
+    // Validation
+    if (text.length === 0) {
+        errorMessage.textContent = "Please type a note first.";
+        return;
+    }
+
+    if (text.length > 200) {
+        errorMessage.textContent = "Notes must be 200 characters or fewer.";
+        return;
+    }
+
+    // Clear error message on valid input
+    errorMessage.textContent = "";
 
     const newNote = {
         id: Date.now(),
         text: text,
-        category: category,
+        category: noteCategory.value,
         createdAt: new Date().toLocaleString()
     };
 
